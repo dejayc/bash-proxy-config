@@ -128,8 +128,8 @@ following convention:
 
 `{{NAME}}` consists of the proxy configuration name, converted to uppercase.
 
-`{{SETTING}}` may consist of any of the following settings: `NO_PROXY`, or
-`URL`.
+`{{SETTING}}` may consist of any of the following settings: `FTP_URL`,
+`HTTP_URL`, `HTTPS_URL`, `NO_PROXY`, or `URL`.
 
 For example, to define a proxy configuration named `local` with a proxy URL
 of `http://localhost:8080`, define the following variable within `config.sh`:
@@ -146,18 +146,49 @@ configuration may be invoked using `bash-proxy-config`.
 <table>
 <tr><th>Variable Name</th><th>Purpose</th></tr>
 <tr>
+<td><a name='PROXY_NAME_FTP_URL'></a><code>PROXY_{{NAME}}_FTP_URL</code></td>
+<td><p>Specifies the proxy URL to use for FTP connections when using proxy
+configuration <code>{{NAME}}</code>.</p>
+<p>If not defined, defaults to the value specified in
+<code>PROXY_{{NAME}}_URL</code>.</p></td>
+</tr>
+<tr>
+<td><a name='PROXY_NAME_HTTP_URL'></a>
+  <code>PROXY_{{NAME}}_HTTP_URL</code></td>
+<td><p>Specifies the proxy URL to use for HTTP connections when using proxy
+configuration <code>{{NAME}}</code>.</p>
+<p>If not defined, defaults to the value specified in
+<code>PROXY_{{NAME}}_URL</code>.</p></td>
+</tr>
+<tr>
+<td><a name='PROXY_NAME_HTTPS_URL'></a>
+  <code>PROXY_{{NAME}}_HTTPS_URL</code></td>
+<td><p>Specifies the proxy URL to use for HTTPS connections when using proxy
+configuration <code>{{NAME}}</code>.</p>
+<p>If not defined, defaults to the value specified in
+<code>PROXY_{{NAME}}_URL</code>.</p></td>
+</tr>
+<tr>
 <td><a name='PROXY_NAME_NO_PROXY'></a>
   <code>PROXY_{{NAME}}_NO_PROXY</code></td>
 <td><p>Specifies the hosts to <em>not</em> proxy network requests to when
-using proxy configuration <code>{{NAME}}</code>.  The value of this variable
-is passed to commands via environment variable <code>no_proxy</code>; each
-command may interpret that variable differently.</p></td>
+using proxy configuration <code>{{NAME}}</code>.  The value of this
+variable is passed to commands via environment variable
+<code>no_proxy</code>; each command may interpret that variable
+differently.</p></td>
 </tr>
 <tr>
 <td><a name='PROXY_NAME_URL'></a>
   <code>PROXY_{{NAME}}_URL</code></td>
 <td><p>Specifies the proxy URL to use for FTP, HTTP, and HTTPS connections
-when using proxy configuration <code>{{NAME}}</code>.</p></td>
+when using proxy configuration <code>{{NAME}}</code>, when the following
+variables are not defined:
+<ul>
+<li><code>PROXY_{{NAME}}_FTP_URL</code></li>
+<li><code>PROXY_{{NAME}}_HTTP_URL</code></li>
+<li><code>PROXY_{{NAME}}_HTTPS_URL</code></li>
+</ul>
+</p></td>
 </tr>
 </table>
 

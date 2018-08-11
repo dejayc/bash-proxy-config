@@ -10,6 +10,9 @@
 # interfere with the environment or specified commands.
 set -eu
 
+declare PROXY_LCS="abcdefghijklmnopqrstuvwxyz"
+declare PROXY_UCS="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
 function proxy-call()
 {
   proxy-exec "${@:+${@}}" &&:
@@ -20,11 +23,18 @@ function proxy-call()
   return ${STATUS}
 }
  
+function proxy-cat()
+{
+  IFS='' read -r -d '' OUTPUT ||:
+  echo "${OUTPUT}"
+}
+
 function proxy-cleanup-functions()
 {
   unset -f \
     proxy-call proxy-cat proxy-cleanup-functions proxy-exec \
-    proxy-get-settings proxy-show
+    proxy-get-settings proxy-lcase proxy-show proxy-ucase
+  unset PROXY_LCS PROXY_UCS
 }
  
 function proxy-exec()
@@ -173,6 +183,22 @@ SETTINGS FILE: '${SETTINGS_FILE}'
   echo "${OUTPUT%[[:space:]]}" >&2
 }
 
+function proxy-lcase()
+{
+  local TARGET="${1-}"
+  local UCHAR=''
+  local UOFFSET=''
+
+  while [[ "${TARGET}" =~ ([A-Z]) ]]
+  do
+    UCHAR="${BASH_REMATCH[1]}"
+    UOFFSET="${PROXY_UCS%%${UCHAR}*}"
+    TARGET="${TARGET//${UCHAR}/${PROXY_LCS:${#UOFFSET}:1}}"
+  done
+
+  echo -n "${TARGET}"
+}
+
 function proxy-show()
 {
   printf '%s: [%s]\n' \
@@ -184,4 +210,20 @@ function proxy-show()
     'https_proxy' "${https_proxy-}" \
     'no_proxy' "${no_proxy-}" \
     'NODE_TLS_REJECT_UNAUTHORIZED' "${NODE_TLS_REJECT_UNAUTHORIZED-}"
+}
+
+function proxy-ucase()
+{
+  local TARGET="${1-}"
+  local LCHAR=''
+  local LOFFSET=''
+
+  while [[ "${TARGET}" =~ ([a-z]) ]]
+  do
+    LCHAR="${BASH_REMATCH[1]}"
+    LOFFSET="${PROXY_LCS%%${LCHAR}*}"
+    TARGET="${TARGET//${LCHAR}/${PROXY_UCS:${#LOFFSET}:1}}"
+  done
+
+  echo -n "${TARGET}"
 }

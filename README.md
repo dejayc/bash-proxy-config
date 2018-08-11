@@ -118,13 +118,13 @@ the parent shell session, in order to prevent the implementation details of
 
 **Download the Latest Release:**
 
-https://github.com/dejayc/bash-proxy-config/archive/v1.0.0.zip
+https://github.com/dejayc/bash-proxy-config/archive/v1.0.1.zip
 
-https://github.com/dejayc/bash-proxy-config/archive/v1.0.0.tar.gz
+https://github.com/dejayc/bash-proxy-config/archive/v1.0.1.tar.gz
 
 **Browse the Latest Release:**
 
-https://github.com/dejayc/bash-proxy-config/releases/tag/v1.0.0
+https://github.com/dejayc/bash-proxy-config/releases/tag/v1.0.1
 
 **Git Clone:**
 ```

@@ -9,7 +9,8 @@ set -eu
 shopt -s expand_aliases
 
 echo "Sourcing 'alias.sh'"
-BASH_PROXY_CONFIG="${1-}" source './include/alias.sh'
+BASH_PROXY_CONFIG="${1-"${BASH_SOURCE[0]%/*}/config.sh"}" \
+  source './include/alias.sh'
 echo
 
 echo 'Requesting proxy environment variables:'

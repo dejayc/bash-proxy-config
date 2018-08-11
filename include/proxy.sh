@@ -109,17 +109,48 @@ function proxy-exec()
 
     case "${ARG}" in
     'for:'*)
-      : # TODO
+      [[ "${ARG}" =~ ^for:(.+)$ ]] || {
+        echo "ERROR: Parameter 'for:' requires a value"
+        return 1
+      } >&2
+
+      FLAG_FOR="${BASH_REMATCH[1]}"
+      [[ "${FLAG_FOR}" =~ ^all|nonlocal$ ]] || {
+        proxy-cat <<:ERR
+ERROR: Parameter 'for:' contains an invalid value.  Allowed values are 'all'
+  or 'nonlocal'
+VALUE: '${FLAG_FOR}'
+:ERR
+        return 1
+      } >&2
+
       shift
       ;;
 
     'off')
-      : # TODO
+      let FLAG_OFF=1
       shift
       ;;
 
     'to:'*)
-      : # TODO
+      [[ "${ARG}" =~ ^to:(.+)$ ]] || {
+        echo "ERROR: Parameter 'to:' requires a value"
+        return 1
+      } >&2
+
+      FLAG_TO="$( proxy-ucase "${BASH_REMATCH[1]}" )"
+      FLAG_TO_LC="$( proxy-lcase "${FLAG_TO}" )"
+
+      [[ "${PROXIES_LOOKUP}" =~ \[${FLAG_TO}\] ]] || {
+        proxy-cat <<:ERR
+ERROR: Parameter 'to:' references an undefined proxy configuration
+PROXY: '${FLAG_TO_LC}'
+VALID PROXIES: ${PROXIES_LIST}
+SETTINGS FILE: '${SETTINGS_FILE}'
+:ERR
+        return 2
+      } >&2
+
       shift
       ;;
 

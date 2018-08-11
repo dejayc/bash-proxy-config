@@ -96,6 +96,9 @@ user-controlled files.
 * **Configuration flexibility**.  A proxy configuration file is a Bash
 script that defines specific variables.  Bash scripts can implement logic as
 simple or as sophisticated as necessary to define these variables.
+Futhermore, proxy configurations support inheritance of default values from
+other proxy configurations, allowing proxy variations to be defined with
+minimal redundancy.
 * **Configuration freshness**.  Since proxy configurations are reloaded
 during every invocation of `bash-proxy-config`, the Bash scripts that define
 proxy configurations can dynamically respond to changing network conditions,
@@ -223,8 +226,8 @@ following convention:
 
 `{{NAME}}` consists of the proxy configuration name, converted to uppercase.
 
-`{{SETTING}}` may consist of any of the following settings: `FOR`, `FTP_URL`,
-`HTTP_URL`, `HTTPS_URL`, `NO_PROXY`, or `URL`.
+`{{SETTING}}` may consist of any of the following settings: `DEFAULT`, `FOR`,
+`FTP_URL`, `HTTP_URL`, `HTTPS_URL`, `NO_PROXY`, or `URL`.
 
 For example, to define a proxy configuration named `local` with a proxy URL
 of `http://localhost:8080`, define the following variable within `config.sh`:
@@ -234,6 +237,32 @@ PROXY_LOCAL_URL='http://localhost:8080'
 
 Once any such variable has been defined for a proxy configuration, that
 configuration may be invoked using `bash-proxy-config`.
+
+#### Proxy Configuration Default Values
+<a name='Proxy Configuration Default Values'></a>
+
+Proxy configurations can easily extend other proxy configurations, to reduce
+the need for copying and pasting values between configurations.
+
+For example, to create a proxy configuration named `debug` that is identical
+to proxy configuration `local`, define the following variable:
+
+```
+PROXY_DEBUG_DEFAULT='local'
+```
+
+This assignment causes `bash-proxy-config` to use the proxy configuration
+settings of `local` whenever settings for `debug` are undefined.
+
+If proxy configuration `debug` needs a specific setting to differ from that
+of `local`, the new setting (e.g. 'NO_PROXY') can be specified:
+
+```
+PROXY_DEBUG_DEFAULT='local'
+PROXY_DEBUG_NO_PROXY='debug.localhost'
+```
+
+All other values for `debug` will continue to derive from `local`.
 
 #### Description of Proxy Configuration Variables
 <a name='Description of Proxy Configuration Variables'></a>
@@ -248,36 +277,66 @@ specified during a <code>bash-proxy-config</code> command.</p>
 configuration.</p></td>
 </tr>
 <tr>
+<td><a name='PROXY_NAME_DEFAULT'></a><code>PROXY_{{NAME}}_DEFAULT</code></td>
+<td><p>Specifies the proxy configuration to be used to look up default values
+when a setting is not defined in the proxy configuration for
+<code>{{NAME}}</code>.  Proxy configurations can inherit default values from
+other proxy configurations in this manner.</p>
+<p>The value for this setting should be the lowercase name of a proxy
+configuration.</p></td>
+</tr>
+<tr>
 <td><a name='PROXY_NAME_FOR'></a><code>PROXY_{{NAME}}_FOR</code></td>
 <td><p>Specifies the default value of the <code>for:</code> parameter for
 proxy configuration <code>{{NAME}}</code>.  This parameter controls the type
 of network requests that are sent to the proxy.</p>
 <p>Valid values are: <code>all</code>, which represents all network requests;
 and <code>nonlocal</code>, which represents all network requests
-<em>except</em> for localhost network requests.</p></td>
+<em>except</em> for localhost network requests.</p>
+<p>If not defined, defaults to the value specified in
+<code>PROXY_{{DEFAULT}}_FOR</code>, where <code>{{DEFAULT}}</code> is defined
+by <code>PROXY_{{NAME}}_DEFAULT</code>.</p></td>
 </tr>
 <tr>
 <td><a name='PROXY_NAME_FTP_URL'></a><code>PROXY_{{NAME}}_FTP_URL</code></td>
 <td><p>Specifies the proxy URL to use for FTP connections when using proxy
 configuration <code>{{NAME}}</code>.</p>
-<p>If not defined, defaults to the value specified in
-<code>PROXY_{{NAME}}_URL</code>.</p></td>
+<p>If not defined, defaults to the value specified first in:
+<ul>
+<li><code>PROXY_{{NAME}}_URL</code></li>
+<li><code>PROXY_{{DEFAULT}}_FTP_URL</code></li>
+<li><code>PROXY_{{DEFAULT}}_URL</code></li>
+</ul>
+where <code>{{DEFAULT}}</code> is defined by
+<code>PROXY_{{NAME}}_DEFAULT</code>.</p></td>
 </tr>
 <tr>
 <td><a name='PROXY_NAME_HTTP_URL'></a>
   <code>PROXY_{{NAME}}_HTTP_URL</code></td>
 <td><p>Specifies the proxy URL to use for HTTP connections when using proxy
 configuration <code>{{NAME}}</code>.</p>
-<p>If not defined, defaults to the value specified in
-<code>PROXY_{{NAME}}_URL</code>.</p></td>
+<p>If not defined, defaults to the value specified first in:
+<ul>
+<li><code>PROXY_{{NAME}}_URL</code></li>
+<li><code>PROXY_{{DEFAULT}}_HTTP_URL</code></li>
+<li><code>PROXY_{{DEFAULT}}_URL</code></li>
+</ul>
+where <code>{{DEFAULT}}</code> is defined by
+<code>PROXY_{{NAME}}_DEFAULT</code>.</p></td>
 </tr>
 <tr>
 <td><a name='PROXY_NAME_HTTPS_URL'></a>
   <code>PROXY_{{NAME}}_HTTPS_URL</code></td>
 <td><p>Specifies the proxy URL to use for HTTPS connections when using proxy
 configuration <code>{{NAME}}</code>.</p>
-<p>If not defined, defaults to the value specified in
-<code>PROXY_{{NAME}}_URL</code>.</p></td>
+<p>If not defined, defaults to the value specified first in:
+<ul>
+<li><code>PROXY_{{NAME}}_URL</code></li>
+<li><code>PROXY_{{DEFAULT}}_HTTPS_URL</code></li>
+<li><code>PROXY_{{DEFAULT}}_URL</code></li>
+</ul>
+where <code>{{DEFAULT}}</code> is defined by
+<code>PROXY_{{NAME}}_DEFAULT</code>.</p></td>
 </tr>
 <tr>
 <td><a name='PROXY_NAME_NO_PROXY'></a>
@@ -287,7 +346,10 @@ using proxy configuration <code>{{NAME}}</code>, when parameter
 <code>for:</code> has the value <code>nonlocal</code>.  The value of this
 variable is passed to commands via environment variable
 <code>no_proxy</code>; each command may interpret that variable
-differently.</p></td>
+differently.</p>
+<p>If not defined, defaults to the value specified in
+<code>PROXY_{{DEFAULT}}_NO_PROXY</code>, where <code>{{DEFAULT}}</code> is
+defined by <code>PROXY_{{NAME}}_DEFAULT</code>.</p></td>
 </tr>
 <tr>
 <td><a name='PROXY_NAME_URL'></a>
@@ -300,7 +362,10 @@ variables are not defined:
 <li><code>PROXY_{{NAME}}_HTTP_URL</code></li>
 <li><code>PROXY_{{NAME}}_HTTPS_URL</code></li>
 </ul>
-</p></td>
+</p>
+<p>If not defined, defaults to the value specified in
+<code>PROXY_{{DEFAULT}}_URL</code>, where <code>{{DEFAULT}}</code> is defined
+by <code>PROXY_{{NAME}}_DEFAULT</code>.</p></td>
 </tr>
 </table>
 

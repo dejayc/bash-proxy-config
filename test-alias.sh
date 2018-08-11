@@ -12,5 +12,9 @@ echo "Sourcing 'alias.sh'"
 BASH_PROXY_CONFIG="${1-}" source './include/alias.sh'
 echo
 
+echo 'Requesting proxy environment variables:'
+proxy proxy-show
+echo
+
 echo 'Listing proxy environment variables:'
 set | grep -i proxy

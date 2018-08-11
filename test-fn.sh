@@ -11,5 +11,9 @@ echo "Sourcing 'fn.sh'"
 BASH_PROXY_CONFIG="${1-}" source './include/fn.sh'
 echo
 
+echo 'Requesting proxy environment variables:'
+proxy proxy-show
+echo
+
 echo 'Listing proxy environment variables:'
 set | grep -i proxy

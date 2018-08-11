@@ -165,6 +165,114 @@ SETTINGS FILE: '${SETTINGS_FILE}'
     CMD="$( printf '%q ' "${@}" )"
     CMD="${CMD% }"
   }
+
+  declare -i STATUS=0
+
+  if [[ ${FLAG_OFF} -ne 0 ]]
+  then
+    [[ -z "${FLAG_FOR}${FLAG_TO}" ]] || {
+      echo "ERROR: Parameter 'off' may not be combined with other parameters"
+      return 1
+    } >&2
+
+    if [[ $# -gt 0 ]]
+    then
+      echo 'Disabling proxy for command'
+      HTTP_PROXY='' \
+        HTTPS_PROXY='' \
+        http_proxy='' \
+        https_proxy='' \
+        no_proxy='' \
+        NODE_TLS_REJECT_UNAUTHORIZED=1 \
+        eval "${CMD}" || let STATUS=${?} ||:
+        return ${STATUS}
+    else
+      echo 'Disabling proxy'
+      unset HTTP_PROXY
+      unset HTTPS_PROXY
+      unset http_proxy
+      unset https_proxy
+      unset no_proxy
+      unset NODE_TLS_REJECT_UNAUTHORIZED
+    fi
+  else
+    [[ -n "${FLAG_TO}" ]] || {
+      [[ -n "${PROXY_DEFAULT_TO-}" ]] || {
+        proxy-cat <<:ERR
+ERROR: Parameter 'to:' was missing, and no default proxy configuration was
+  specified via proxy configuration variable
+VARIABLE: 'PROXY_DEFAULT_TO'
+VALID VALUES: ${PROXIES_LIST}
+SETTINGS FILE: '${SETTINGS_FILE}'
+:ERR
+        return 1
+      } >&2
+
+      FLAG_TO="$( proxy-ucase "${PROXY_DEFAULT_TO}" )"
+      FLAG_TO_LC="$( proxy-lcase "${FLAG_TO}" )"
+    }
+
+    [[ -n "${FLAG_FOR}" ]] || {
+
+      local PROXY_FOR_VAR="PROXY_$( proxy-ucase "${FLAG_TO}" )_FOR"
+      local PROXY_FOR="${!PROXY_FOR_VAR-}"
+
+      [[ -n "${PROXY_FOR}" ]] || {
+        proxy-cat <<:ERR
+ERROR: Parameter 'for:' was missing, and no default value was specified via
+  the proxy configuration variable
+VARIABLE: '${PROXY_FOR_VAR}'
+SETTINGS FILE: '${SETTINGS_FILE}'
+:ERR
+        return 2
+      } >&2
+
+      FLAG_FOR="$( proxy-lcase "${PROXY_FOR}" )"
+    }
+
+    local PROXY_NO_PROXY_VAR=''
+    local PROXY_NO_PROXY=''
+
+    [[ "${FLAG_FOR}" == 'nonlocal' ]] && {
+      PROXY_NO_PROXY_VAR="PROXY_${FLAG_TO}_NO_PROXY"
+      PROXY_NO_PROXY="${!PROXY_NO_PROXY_VAR-}"
+    }
+
+    local PROXY_FTP_URL_VAR="PROXY_${FLAG_TO}_FTP_URL"
+    local PROXY_FTP_URL="${!PROXY_FTP_URL_VAR-}"
+
+    local PROXY_HTTP_URL_VAR="PROXY_${FLAG_TO}_HTTP_URL"
+    local PROXY_HTTP_URL="${!PROXY_HTTP_URL_VAR-}"
+
+    local PROXY_HTTPS_URL_VAR="PROXY_${FLAG_TO}_HTTPS_URL"
+    local PROXY_HTTPS_URL="${!PROXY_HTTPS_URL_VAR-}"
+
+    if [[ $# -gt 0 ]]
+    then
+      echo \
+"Proxying ${FLAG_FOR} traffic to '${FLAG_TO_LC}' for command"
+      FTP_PROXY="${PROXY_FTP_URL}" \
+        HTTP_PROXY="${PROXY_HTTP_URL}" \
+        HTTPS_PROXY="${PROXY_HTTPS_URL}" \
+        ftp_proxy="${PROXY_FTP_URL}" \
+        http_proxy="${PROXY_HTTP_URL}" \
+        https_proxy="${PROXY_HTTPS_URL}" \
+        no_proxy="${PROXY_NO_PROXY}" \
+        NODE_TLS_REJECT_UNAUTHORIZED=0 \
+        eval "${CMD}" || let STATUS=${?} ||:
+        return ${STATUS}
+    else
+      echo "Proxying ${FLAG_FOR} traffic to '${FLAG_TO_LC}'"
+      export FTP_PROXY="${PROXY_FTP_URL}"
+      export HTTP_PROXY="${PROXY_HTTP_URL}"
+      export HTTPS_PROXY="${PROXY_HTTPS_URL}"
+      export ftp_proxy="${PROXY_FTP_URL}"
+      export http_proxy="${PROXY_HTTP_URL}"
+      export https_proxy="${PROXY_HTTPS_URL}"
+      export no_proxy="${PROXY_NO_PROXY}"
+      export NODE_TLS_REJECT_UNAUTHORIZED=0
+    fi
+  fi
 }
 
 function proxy-get-settings()
@@ -463,7 +571,6 @@ ${PROXY_FOR_VAR}: '${PROXY_FOR}'
 
   printf -v OUTPUT '%s\n' "${SETTINGS[@]}"
   echo -n "${OUTPUT%[[:space:]]}"
-  echo "${OUTPUT%[[:space:]]}" >&2
 }
 
 function proxy-lcase()

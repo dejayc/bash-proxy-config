@@ -8,7 +8,7 @@
 set -eu
 
 echo "Sourcing 'fn.sh'"
-source './include/fn.sh'
+BASH_PROXY_CONFIG="${1-}" source './include/fn.sh'
 echo
 
 echo 'Listing proxy environment variables:'

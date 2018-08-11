@@ -124,6 +124,22 @@ directory
    source "${HOME}/.bash-proxy-config/include/fn.sh"
    ```
 
+1. If a configuration file other than `${HOME}/.bash-proxy-config/config.sh`
+   is to be used, specify the proper location by prefixing the `source`
+   command with a variable assignment in the form of:
+   ```
+   BASH_PROXY_CONFIG='/path/to/bash-proxy-config/config.sh'
+   ```
+   For example, to load an instance of `bash-proxy-config` that has been
+   installed to the directory `/var/bash-proxy-config/`, insert the following
+   statement into `.bashrc`:
+   ```
+   BASH_PROXY_CONFIG='/var/bash-proxy-config/config.sh' \
+     source '/var/bash-proxy-config/include/alias.sh'
+
+   ```
+   (Note the backslash `\` line continuation character above.)
+
 ## Configuration of Proxies
 <a name='Configuration of Proxies'></a>
 

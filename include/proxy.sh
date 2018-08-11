@@ -12,16 +12,52 @@ set -eu
 
 function proxy-call()
 {
-  proxy-exec "${@:+${@}}"
+  proxy-exec "${@:+${@}}" &&:
+  declare -i STATUS=$?
+
+  [[ ${PROXY_CLEANUP_FUNCTIONS-0} -eq 0 ]] || proxy-cleanup-functions ||:
+  unset PROXY_CLEANUP_FUNCTIONS
+  return ${STATUS}
+}
+ 
+function proxy-cleanup-functions()
+{
+  unset -f \
+    proxy-call proxy-cat proxy-cleanup-functions proxy-exec \
+    proxy-get-settings proxy-show
 }
  
 function proxy-exec()
 {
-  local SETTINGS_FILE="./config.sh"
+  local SETTINGS_FILE=''
+  local DEFAULT_SETTINGS_FILE="${HOME-}/.bash-proxy-config/config.sh"
+
+  # Parse function options.
+  declare -i OPTIND
+  local OPT=''
+
+  while getopts ":f:u" OPT
+  do
+    case "${OPT}" in
+    u)
+      export PROXY_CLEANUP_FUNCTIONS=1
+      ;;
+    f)
+      SETTINGS_FILE="${OPTARG}"
+      ;;
+    *) {
+      echo "ERROR: Unsupported flag '-${OPTARG}' encountered"
+      return 2
+    } >&2
+    esac
+  done
+  shift $(( OPTIND - 1 ))
+  # Done parsing function options.
 
   local PROXIES_SETTINGS_LIST=''
   PROXIES_SETTINGS_LIST="$(
-    proxy-get-settings "${SETTINGS_FILE}" )" || return
+    proxy-get-settings "${SETTINGS_FILE}" "${DEFAULT_SETTINGS_FILE}" )" \
+    || return
 
   declare -a ASSIGNMENTS=()
   IFS=$'\n' read -r -d '' -a ASSIGNMENTS <<< "${PROXIES_SETTINGS_LIST}" ||:
@@ -50,22 +86,29 @@ function proxy-cat()
 function proxy-get-settings()
 {
   local SETTINGS_FILE="${1-}"
+  local DEFAULT_SETTINGS_FILE="${2-}"
 
   if [[ -n "${SETTINGS_FILE-}" ]]
   then
     [[ -f "${SETTINGS_FILE}" ]] && source "${SETTINGS_FILE}" || {
       proxy-cat <<:ERR
-ERROR: Unable to load the default proxy settings file.  Please ensure that
-  one exists.
-FILE: '${SETTINGS_FILE}'
+ERROR: Unable to load the specified proxy settings file.  Please specify a
+  valid file via the '-f' flag, or omit the flag to load the default file.
+SPECIFIED FILE: '${SETTINGS_FILE}'
 :ERR
       return 3
     } >&2
   else
+    SETTINGS_FILE="${DEFAULT_SETTINGS_FILE}"
+
+    [[ -f "${SETTINGS_FILE}" ]] && source "${SETTINGS_FILE}" || {
     proxy-cat <<:ERR
-ERROR: No default proxy settings file was specified
+ERROR: Unable to load the default proxy settings file.  Please ensure that
+  one exists, or specify a different file via the '-f' flag.
+FILE: '${SETTINGS_FILE}'
 :ERR
     return 3
+    } >&2
   fi
 
   local PROXY_VAR_LIST=''

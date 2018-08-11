@@ -373,14 +373,24 @@ by <code>PROXY_{{NAME}}_DEFAULT</code>.</p></td>
 <a name='Verifying Proxy Settings'></a>
 
 To verify the settings that `bash-proxy-config` applies, execute the
-`proxy-show` command to see which variables are applied by
-`bash-proxy-config`.
+`proxy-show` and `proxy-settings` commands to see which variables and
+settings are applied by `bash-proxy-config`.
 
 For example, to see what environment variables are applied by
 `bash-proxy-config` for proxy configuration `local`, execute:
 ```
 proxy to:local proxy-show
 ```
+
+To see what internal settings (include applied default values) have been
+calculated by `bash-proxy-config` for _all_ proxy configurations, execute:
+```
+proxy proxy-settings
+```
+
+Note that `proxy-settings` shows internal settings for _all_ proxy
+configurations, even if a specific proxy configuration has been specified via
+the `to:` parameter.
 
 ## License and Copyright
 <a name='License and Copyright'></a>

@@ -33,7 +33,7 @@ function proxy-cleanup-functions()
 {
   unset -f \
     proxy-call proxy-cat proxy-cleanup-functions proxy-exec \
-    proxy-get-settings proxy-lcase proxy-show proxy-ucase
+    proxy-get-settings proxy-lcase proxy-settings proxy-show proxy-ucase
   unset PROXY_LCS PROXY_UCS
 }
  
@@ -69,6 +69,8 @@ function proxy-exec()
     proxy-get-settings "${SETTINGS_FILE}" "${DEFAULT_SETTINGS_FILE}" )" \
     || return
 
+  declare -a PROXIES_SETTINGS=()
+
   declare -a ASSIGNMENTS=()
   IFS=$'\n' read -r -d '' -a ASSIGNMENTS <<< "${PROXIES_SETTINGS_LIST}" ||:
 
@@ -83,6 +85,10 @@ function proxy-exec()
       local VALUE="${BASH_REMATCH[2]}"
 
       eval declare "${SETTING}"="${VALUE}"
+
+      [[ "${SETTING}" =~ ^PROXY_ ]] && {
+        PROXIES_SETTINGS[${#PROXIES_SETTINGS[@]}]="${SETTING}=${VALUE}"
+      }
     }
   done
 
@@ -587,6 +593,13 @@ function proxy-lcase()
   done
 
   echo -n "${TARGET}"
+}
+
+function proxy-settings()
+{
+  [[ ${#PROXIES_SETTINGS[@]-} -gt 0 ]] && {
+    printf '%s\n' "${PROXIES_SETTINGS[@]}"
+  }
 }
 
 function proxy-show()

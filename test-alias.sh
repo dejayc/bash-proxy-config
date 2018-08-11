@@ -16,5 +16,9 @@ echo 'Requesting proxy environment variables:'
 proxy proxy-show
 echo
 
+echo 'Requesting proxy configuration variables:'
+proxy proxy-settings
+echo
+
 echo 'Listing proxy environment variables:'
 set | grep -i proxy

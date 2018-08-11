@@ -92,7 +92,37 @@ git clone https://github.com/dejayc/bash-proxy-config
 ### Installing the Source Code
 <a name='Installing the Source Code'></a>
 
-TODO
+`bash-proxy-config` files can be copied to any directory that is accessible
+by the user.
+
+A typical user installation of `bash-proxy-config` consists of the following
+steps:
+
+1. Create a new subdirectory `.bash-proxy-config` within the user's `${HOME}`
+directory
+1. Copy the following project file and subdirectory into
+   `.bash-proxy-config`:
+
+   `config.sh`\
+   `include/`
+
+1. Update the user's `.bashrc` file to `source` either of the following
+   files:
+
+   `.bash-proxy-config/include/alias.sh`, which defines a new _alias_ named
+   `proxy`:
+   ```
+   source "${HOME}/.bash-proxy-config/include/alias.sh"
+   ```
+   Note that aliases do not appear in the output of the `set` command.
+
+   OR:
+
+   `.bash-proxy-config/include/fn.sh`, which defines a new _function_ named
+   `proxy`:
+   ```
+   source "${HOME}/.bash-proxy-config/include/fn.sh"
+   ```
 
 ## Configuration of Proxies
 <a name='Configuration of Proxies'></a>
@@ -100,6 +130,11 @@ TODO
 **bash-proxy-config** uses variables within the specified configuration
 script (normally `.bash-config-proxy/config.sh`) to configure proxy settings.
 Users should customize these variables as appropriate to their environment.
+
+When installed typically, `config.sh` is read during each invocation of
+`bash-config-proxy`, in order to ensure configuration freshness, and reduce
+pollution of internal environment variables and functions into the parent
+session.
 
 ### Creating a Proxy Configuration
 <a name='Creating a Proxy Configuration'></a>
@@ -191,6 +226,13 @@ variables are not defined:
 </p></td>
 </tr>
 </table>
+
+### Verifying Proxy Settings
+<a name='Verifying Proxy Settings'></a>
+
+To verify the settings that `bash-proxy-config` applies, execute the
+`proxy-show` command to see which variables are applied by
+`bash-proxy-config`.
 
 ## License and Copyright
 <a name='License and Copyright'></a>

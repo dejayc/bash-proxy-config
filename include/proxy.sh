@@ -8,7 +8,7 @@
 # Enable the following line for development and testing of this script, but
 # disable them during actual use, so that this script doesn't adversely
 # interfere with the environment or specified commands.
-set -eu
+# set -eu
 
 declare PROXY_LCS="abcdefghijklmnopqrstuvwxyz"
 declare PROXY_UCS="ABCDEFGHIJKLMNOPQRSTUVWXYZ"

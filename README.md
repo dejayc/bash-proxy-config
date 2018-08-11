@@ -6,7 +6,44 @@ individual commands.
 ## Usage Examples
 <a name='Usage Examples'></a>
 
-TODO
+Specify that the current shell session should use the configured proxy named 
+`work` for all non-local network requests:
+```
+# The following commands are equivalent:
+proxy to:work
+proxy for:nonlocal to:work
+```
+
+Specify that the `curl` command should be executed using the configured
+proxy named `work`:
+```
+proxy to:work curl https://github.com
+```
+
+Specify that the current shell session should use the configured proxy named 
+`work` for all network requests, including localhost requests:
+```
+proxy for:all to:work
+```
+
+Specify that the current shell session should use no proxy:
+```
+proxy off
+```
+
+Specify that the `curl` command should be executed using the configured
+proxy named `local` when retrieving a local web page:
+```
+proxy to:local curl http://localhost/webpage
+```
+
+Specify that the current shell session should use the configured proxy named 
+`work` for all non-local network requests, but execute the `curl` command
+using no proxy:
+```
+proxy to:work
+proxy off curl https://github.com
+```
 
 ## Overview
 <a name='Overview'></a>
@@ -41,7 +78,9 @@ requests to another proxy.
 Similarly, while the `no_proxy` environment variable allows the ability to
 specify certain hosts for which network requests _should not_ be proxied,
 there is no ability to do the inverse; i.e. specify that _only_ certain hosts
-should be proxied.
+should be proxied.  Thus, **bash-proxy-config** supports `all` and `nonlocal`
+as valid values for the `for:` parameter, but does not support `local`,
+because that would not be feasible to implement via `no_proxy`.
 
 Furthermore, `no_proxy` support across programs varies significantly; some
 programs allow wildcards and CIDR hosts to be specified in `no_proxy`, while
@@ -159,7 +198,12 @@ session.
 <a name='Proxy Configuration Names'></a>
 
 Proxy configurations must be named by the user so they can be referenced from
-`bash-proxy-config` commands.
+`bash-proxy-config` commands.  In the following example, proxy configuration
+`local` is referenced:
+
+```
+proxy to:local
+```
 
 Configuration names may contain lowercase letters `a` through `z`, and
 numbers `0` through `9`.  No other characters are permitted.
@@ -179,7 +223,7 @@ following convention:
 
 `{{NAME}}` consists of the proxy configuration name, converted to uppercase.
 
-`{{SETTING}}` may consist of any of the following settings: `FTP_URL`,
+`{{SETTING}}` may consist of any of the following settings: `FOR`, `FTP_URL`,
 `HTTP_URL`, `HTTPS_URL`, `NO_PROXY`, or `URL`.
 
 For example, to define a proxy configuration named `local` with a proxy URL
@@ -196,6 +240,22 @@ configuration may be invoked using `bash-proxy-config`.
 
 <table>
 <tr><th>Variable Name</th><th>Purpose</th></tr>
+<tr>
+<td><a name='PROXY_DEFAULT_TO'></a><code>PROXY_DEFAULT_TO</code></td>
+<td><p>The default value to use when the <code>to:</code> parameter is not
+specified during a <code>bash-proxy-config</code> command.</p>
+<p>The value for this setting should be the lowercase name of a proxy
+configuration.</p></td>
+</tr>
+<tr>
+<td><a name='PROXY_NAME_FOR'></a><code>PROXY_{{NAME}}_FOR</code></td>
+<td><p>Specifies the default value of the <code>for:</code> parameter for
+proxy configuration <code>{{NAME}}</code>.  This parameter controls the type
+of network requests that are sent to the proxy.</p>
+<p>Valid values are: <code>all</code>, which represents all network requests;
+and <code>nonlocal</code>, which represents all network requests
+<em>except</em> for localhost network requests.</p></td>
+</tr>
 <tr>
 <td><a name='PROXY_NAME_FTP_URL'></a><code>PROXY_{{NAME}}_FTP_URL</code></td>
 <td><p>Specifies the proxy URL to use for FTP connections when using proxy
@@ -223,7 +283,8 @@ configuration <code>{{NAME}}</code>.</p>
 <td><a name='PROXY_NAME_NO_PROXY'></a>
   <code>PROXY_{{NAME}}_NO_PROXY</code></td>
 <td><p>Specifies the hosts to <em>not</em> proxy network requests to when
-using proxy configuration <code>{{NAME}}</code>.  The value of this
+using proxy configuration <code>{{NAME}}</code>, when parameter
+<code>for:</code> has the value <code>nonlocal</code>.  The value of this
 variable is passed to commands via environment variable
 <code>no_proxy</code>; each command may interpret that variable
 differently.</p></td>
@@ -249,6 +310,12 @@ variables are not defined:
 To verify the settings that `bash-proxy-config` applies, execute the
 `proxy-show` command to see which variables are applied by
 `bash-proxy-config`.
+
+For example, to see what environment variables are applied by
+`bash-proxy-config` for proxy configuration `local`, execute:
+```
+proxy to:local proxy-show
+```
 
 ## License and Copyright
 <a name='License and Copyright'></a>

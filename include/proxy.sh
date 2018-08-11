@@ -22,7 +22,7 @@ function proxy-call()
   unset PROXY_CLEANUP_FUNCTIONS
   return ${STATUS}
 }
- 
+
 function proxy-cat()
 {
   IFS='' read -r -d '' OUTPUT ||:
@@ -85,12 +85,55 @@ function proxy-exec()
       eval declare "${SETTING}"="${VALUE}"
     }
   done
-}
 
-function proxy-cat()
-{
-  IFS='' read -r -d '' OUTPUT ||:
-  echo "${OUTPUT}"
+  PROXIES_LIST="$( proxy-ucase "${PROXIES_LIST}" )"
+  declare -a PROXIES="( ${PROXIES_LIST} )"
+
+  local PROXIES_LOOKUP=''
+  printf -v PROXIES_LOOKUP '[%s]' "${PROXIES[@]}"
+
+  printf -v PROXIES_LIST '%s, ' "${PROXIES[@]}"
+  PROXIES_LIST="$( proxy-lcase "${PROXIES_LIST%%, }" )"
+
+  # The following syntaxes are supported:
+  # proxy [for:all|nonlocal] [to:PROXY] [CMD]
+
+  local FLAG_FOR=''
+  local FLAG_TO=''
+  local FLAG_TO_LC=''
+  local FLAG_OFF=''
+
+  while [ ${#} -gt 0 ]
+  do
+    local ARG="${1}"
+
+    case "${ARG}" in
+    'for:'*)
+      : # TODO
+      shift
+      ;;
+
+    'off')
+      : # TODO
+      shift
+      ;;
+
+    'to:'*)
+      : # TODO
+      shift
+      ;;
+
+    *)
+      break
+      ;;
+    esac
+  done
+
+  local CMD=''
+  [[ $# -gt 0 ]] && {
+    CMD="$( printf '%q ' "${@}" )"
+    CMD="${CMD% }"
+  }
 }
 
 function proxy-get-settings()
@@ -112,12 +155,12 @@ SPECIFIED FILE: '${SETTINGS_FILE}'
     SETTINGS_FILE="${DEFAULT_SETTINGS_FILE}"
 
     [[ -f "${SETTINGS_FILE}" ]] && source "${SETTINGS_FILE}" || {
-    proxy-cat <<:ERR
+      proxy-cat <<:ERR
 ERROR: Unable to load the default proxy settings file.  Please ensure that
   one exists, or specify a different file via the '-f' flag.
 FILE: '${SETTINGS_FILE}'
 :ERR
-    return 3
+      return 3
     } >&2
   fi
 

@@ -102,9 +102,14 @@ function proxy-exec()
   PROXIES_LIST="$( proxy-lcase "${PROXIES_LIST%%, }" )"
 
   # The following syntaxes are supported:
-  # proxy [for:all|nonlocal] [to:PROXY] [CMD]
+  # proxy [for:all|nonlocal] [to:PROXY] [COMMAND]
+  # proxy listen:PROXY[:ftp|http|https] [to:PROXY]
 
   local FLAG_FOR=''
+  local FLAG_LISTEN=''
+  local FLAG_LISTEN_LC=''
+  local FLAG_LISTEN_PROTOCOL=''
+  local FLAG_LISTEN_PROTOCOL_LC=''
   local FLAG_TO=''
   local FLAG_TO_LC=''
   local FLAG_OFF=''
@@ -128,6 +133,44 @@ ERROR: Parameter 'for:' contains an invalid value.  Allowed values are 'all'
 VALUE: '${FLAG_FOR}'
 :ERR
         return 1
+      } >&2
+
+      shift
+      ;;
+
+    'listen:'*)
+      [[ "${ARG}" =~ ^listen:(.+)$ ]] || {
+        echo "ERROR: Parameter 'listen:' requires a value"
+        return 1
+      } >&2
+
+      FLAG_LISTEN="$( proxy-ucase "${BASH_REMATCH[1]}" )"
+
+      [[ "${FLAG_LISTEN}" =~ ^(.+):(.*)$ ]] && {
+        FLAG_LISTEN="${BASH_REMATCH[1]}"
+        FLAG_LISTEN_PROTOCOL="${BASH_REMATCH[2]}"
+        FLAG_LISTEN_PROTOCOL_LC="$( proxy-lcase "${FLAG_LISTEN_PROTOCOL}" )"
+
+        [[ "${FLAG_LISTEN_PROTOCOL_LC}" =~ ^http|https|ftp$ ]] || {
+          proxy-cat <<:ERR
+ERROR: Parameter 'listen:' references an invalid protocol.  Valid values are
+  'http', 'https', and 'ftp'
+PROTOCOL: '${FLAG_LISTEN_PROTOCOL_LC}'
+:ERR
+          return 2
+        } >&2
+      }
+
+      FLAG_LISTEN_LC="$( proxy-lcase "${FLAG_LISTEN}" )"
+
+      [[ "${PROXIES_LOOKUP}" =~ \[${FLAG_LISTEN}\] ]] || {
+        proxy-cat <<:ERR
+ERROR: Parameter 'listen:' references an undefined proxy configuration
+PROXY: '${FLAG_LISTEN_LC}'
+VALID PROXIES: ${PROXIES_LIST}
+SETTINGS FILE: '${SETTINGS_FILE}'
+:ERR
+        return 2
       } >&2
 
       shift
@@ -166,17 +209,17 @@ SETTINGS FILE: '${SETTINGS_FILE}'
     esac
   done
 
-  local CMD=''
+  local COMMAND=''
   [[ $# -gt 0 ]] && {
-    CMD="$( printf '%q ' "${@}" )"
-    CMD="${CMD% }"
+    COMMAND="$( printf '%q ' "${@}" )"
+    COMMAND="${COMMAND% }"
   }
 
   declare -i STATUS=0
 
   if [[ ${FLAG_OFF} -ne 0 ]]
   then
-    [[ -z "${FLAG_FOR}${FLAG_TO}" ]] || {
+    [[ -z "${FLAG_FOR}${FLAG_LISTEN}${FLAG_TO}" ]] || {
       echo "ERROR: Parameter 'off' may not be combined with other parameters"
       return 1
     } >&2
@@ -190,7 +233,7 @@ SETTINGS FILE: '${SETTINGS_FILE}'
         https_proxy='' \
         no_proxy='' \
         NODE_TLS_REJECT_UNAUTHORIZED=1 \
-        eval "${CMD}" || let STATUS=${?} ||:
+        eval "${COMMAND}" || let STATUS=${?} ||:
         return ${STATUS}
     else
       echo 'Disabling proxy'
@@ -201,6 +244,90 @@ SETTINGS FILE: '${SETTINGS_FILE}'
       unset no_proxy
       unset NODE_TLS_REJECT_UNAUTHORIZED
     fi
+  elif [ -n "${FLAG_LISTEN}" ]
+  then
+    [[ -z "${FLAG_FOR}" ]] || {
+      proxy-cat <<:ERR
+ERROR: Parameter 'listen:' may not be combined with parameter 'for:'
+:ERR
+      return 1
+    } >&2
+
+    [[ -z "${COMMAND}" ]] || {
+      proxy-cat <<:ERR
+ERROR: Parameter 'listen:' may not be combined with commands
+COMMAND: '${COMMAND}'
+:ERR
+      return 1
+    } >&2
+
+    local VAR=''
+    COMMAND=''
+
+    [[ -n "${FLAG_TO}" ]] && {
+      [[ -n "${FLAG_LISTEN_PROTOCOL}" ]] && {
+        VAR="PROXY_${FLAG_LISTEN}_${FLAG_LISTEN_PROTOCOL}_LISTEN_TO"
+        COMMAND="${!VAR-}"
+      }
+      [[ -n "${COMMAND}" ]] || {
+        VAR="PROXY_${FLAG_LISTEN}_LISTEN_TO"
+        COMMAND="${!VAR-}"
+      }
+    }
+    [[ -z "${COMMAND}" ]] && [[ -n "${FLAG_LISTEN_PROTOCOL}" ]] && {
+      VAR="PROXY_${FLAG_LISTEN}_${FLAG_LISTEN_PROTOCOL}_LISTEN"
+      COMMAND="${!VAR-}"
+    }
+    [[ -n "${COMMAND}" ]] || {
+      VAR="PROXY_${FLAG_LISTEN}_LISTEN"
+      COMMAND="${!VAR-}"
+    }
+    [[ -n "${COMMAND}" ]] || {
+      proxy-cat <<:ERR
+ERROR: The specified proxy configuration for parameter 'listen:' does not
+  define a proxy command.  Please ensure that one or more variables exist
+  with suffix '_LISTEN' or '_LISTEN_TO', either with or without a protocol
+  preceding the suffix.  For example, to configure a proxy command for the
+  proxy configuration named 'local', define variables such as
+  'PROXY_LOCAL_LISTEN', 'PROXY_LOCAL_LISTEN_TO', 'PROXY_LOCAL_HTTP_LISTEN',
+  etc.
+PROXY: '${FLAG_LISTEN_LC}'
+SETTINGS FILE: '${SETTINGS_FILE}'
+:ERR
+      return 1
+    } >&2
+
+    if [[ "${COMMAND}" =~ \{\{PROXY_TO\}\} ]]
+    then
+      [[ -n "${FLAG_TO}" ]] || {
+        proxy-cat <<:ERR
+ERROR: The specified proxy configuration for parameter 'listen:' contains
+  placeholder '{{PROXY_TO}}', but the command was invoked without specifying
+  the 'to:' parameter.  Please specify the 'to:' parameter, or remove the
+  placeholder from the proxy command definition.
+PROXY: '${FLAG_LISTEN_LC}'
+COMMAND: '${COMMAND}'
+SETTINGS FILE: '${SETTINGS_FILE}'
+:ERR
+        return 1
+      } >&2
+
+      local VAR=''
+      local LISTEN_TO=''
+
+      [[ -n "${FLAG_LISTEN_PROTOCOL}" ]] && {
+        VAR="PROXY_${FLAG_TO}_${FLAG_LISTEN_PROTOCOL}_URL"
+        LISTEN_TO="${!VAR-}"
+      }
+      [[ -n "${LISTEN_TO}" ]] || {
+        VAR="PROXY_${FLAG_TO}_URL"
+        LISTEN_TO="${!VAR-}"
+      }
+
+      COMMAND="${COMMAND//\{\{PROXY_TO\}\}/${LISTEN_TO}}"
+    fi
+    echo "Starting proxy '${COMMAND}'"
+    eval "${COMMAND}"
   else
     [[ -n "${FLAG_TO}" ]] || {
       [[ -n "${PROXY_DEFAULT_TO-}" ]] || {
@@ -265,7 +392,7 @@ SETTINGS FILE: '${SETTINGS_FILE}'
         https_proxy="${PROXY_HTTPS_URL}" \
         no_proxy="${PROXY_NO_PROXY}" \
         NODE_TLS_REJECT_UNAUTHORIZED=0 \
-        eval "${CMD}" || let STATUS=${?} ||:
+        eval "${COMMAND}" || let STATUS=${?} ||:
         return ${STATUS}
     else
       echo "Proxying ${FLAG_FOR} traffic to '${FLAG_TO_LC}'"
@@ -336,7 +463,7 @@ SETTINGS FILE: '${SETTINGS_FILE}'
     let I+=1
 
     [[ "${PROXY_VAR}" =~ ^PROXY_([0-9A-Z]+)_\
-(DEFAULT|((FTP_|HTTP_|HTTPS_)?URL)|NO_PROXY)$ ]] && {
+(DEFAULT|((FTP_|HTTP_|HTTPS_)?(LISTEN(_TO)?|URL)|NO_PROXY))$ ]] && {
       local PROXY="${BASH_REMATCH[1]}"
       [[ "${PROXIES_LOOKUP}" =~ \[${PROXY}\] ]] || {
         PROXIES[${#PROXIES[@]}]="${PROXY}"
@@ -498,7 +625,7 @@ ${PROXY_FOR_VAR}: '${PROXY_FOR}'
     printf -v ASSIGNMENT '%s=%q' "${PROXY_NO_PROXY_VAR}" "${PROXY_NO_PROXY}"
     SETTINGS[${#SETTINGS[@]}]="${ASSIGNMENT}"
 
-    declare -a ATTRS=( 'URL' )
+    declare -a ATTRS=( 'LISTEN' 'LISTEN_TO' 'URL' )
     declare -i A=0
 
     while [ ${A} -lt ${#ATTRS[@]} ]

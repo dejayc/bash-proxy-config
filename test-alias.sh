@@ -23,3 +23,7 @@ echo
 
 echo 'Listing proxy environment variables:'
 set | grep -i proxy
+
+[[ ${#} -lt 2 ]] || {
+  proxy "${@:2}"
+}

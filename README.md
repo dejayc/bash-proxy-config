@@ -1,7 +1,7 @@
 # bash-proxy-config
 **bash-proxy-config**: A script that facilitiates the setting and unsetting
 of upstream and local proxies, either for the current shell session, or
-individual commands.
+individual commands.  Also facilitates the starting of proxies.
 
 ## Usage Examples
 <a name='Usage Examples'></a>
@@ -45,6 +45,23 @@ proxy to:work
 proxy off curl https://github.com
 ```
 
+Start the default proxy command defined by the configured proxy named `work`:
+```
+proxy listen:work
+```
+
+Start the FTP proxy command defined by the configured proxy named `local`:
+```
+proxy listen:local:ftp
+```
+
+Start the HTTP proxy command defined by the configured proxy named `8081`,
+and proxy the outbound network calls from the proxy to an upstream configured
+proxy named `local`:
+```
+proxy listen:8081:http to:local
+```
+
 ## Overview
 <a name='Overview'></a>
 
@@ -67,6 +84,11 @@ environments, where upstream corporate proxies are common, and; development
 environments, where local proxies might be used by developers to capture and
 debug local network requests, and; corporate development environments, where
 local proxies might forward network requests to upstream corporate proxies.
+
+**bash-proxy-config** also provides additional functionality to start proxy
+commands associated with defined proxy configurations.  This is handy for
+developers; it is convenient to start a local proxy using the same
+configuration being used to route network requests to that proxy.
 
 ## Known Limitations
 <a name='Known Limitations'></a>
@@ -118,13 +140,13 @@ the parent shell session, in order to prevent the implementation details of
 
 **Download the Latest Release:**
 
-https://github.com/dejayc/bash-proxy-config/archive/v1.0.2.zip
+https://github.com/dejayc/bash-proxy-config/archive/v1.1.0.zip
 
-https://github.com/dejayc/bash-proxy-config/archive/v1.0.2.tar.gz
+https://github.com/dejayc/bash-proxy-config/archive/v1.1.0.tar.gz
 
 **Browse the Latest Release:**
 
-https://github.com/dejayc/bash-proxy-config/releases/tag/v1.0.2
+https://github.com/dejayc/bash-proxy-config/releases/tag/v1.1.0
 
 **Git Clone:**
 ```
@@ -228,6 +250,10 @@ following convention:
 
 `{{SETTING}}` may consist of any of the following settings: `DEFAULT`, `FOR`,
 `FTP_URL`, `HTTP_URL`, `HTTPS_URL`, `NO_PROXY`, or `URL`.
+
+(NOTE: also see the section
+[Proxy Startup Variables](#Proxy%20Startup%20Variables) for additional
+settings.)
 
 For example, to define a proxy configuration named `local` with a proxy URL
 of `http://localhost:8080`, define the following variable within `config.sh`:
@@ -368,6 +394,92 @@ variables are not defined:
 by <code>PROXY_{{NAME}}_DEFAULT</code>.</p></td>
 </tr>
 </table>
+
+#### Proxy Startup Variables
+<a name='Proxy Startup Variables'></a>
+
+In addition to the variables that define proxy configurations, additional
+variables may be specified to allow proxies to be started on demand, via the
+`listen:` parameter, invoked as such:
+
+```
+proxy listen:8081
+```
+
+Or, to explicitly specify that the FTP proxy (and not the HTTP proxy) should
+be started, invoke:
+
+```
+proxy listen:8081:ftp
+```
+
+To specify that the FTP proxy should be started, with its outbound network
+connections themselves being proxied to a different proxy named `company`,
+invoke:
+
+```
+proxy listen:8081:ftp to:company
+```
+
+These additional variables follow the same naming convention as other proxy
+configuration variables:
+
+`PROXY_{{NAME}}_{{SETTING}}`
+
+`{{NAME}}` consists of the proxy configuration name, converted to uppercase.
+
+`{{SETTING}}` may consist of any of the following settings: `FTP_LISTEN`,
+`FTP_LISTEN_TO`, `HTTP_LISTEN`, `HTTP_LISTEN_TO`, `HTTPS_LISTEN`,
+`HTTPS_LISTEN_TO`, `LISTEN`, `LISTEN_TO`.
+
+The value of these settings must define the system command to be executed in
+order to start the proxy.  For example, to specify that the `ncat` command
+should be executed when starting the HTTP proxy for the configuration named
+`local`, specify:
+
+```
+PROXY_LOCAL_HTTP_LISTEN='ncat'
+```
+
+The `LISTEN` parameter (without protocol prefix) is used as the default
+command when no protocol-specific variable has been defined.
+
+The `_TO` variation of the variable is used when the `to:` parameter is
+specified when starting the proxy.  For the following example startup command:
+
+```
+proxy listen:8081:ftp to:company
+```
+
+the following variables would be checked in this order:
+
+* `PROXY_8081_FTP_LISTEN_TO`
+* `PROXY_8081_LISTEN_TO`
+* `PROXY_8081_FTP_LISTEN`
+* `PROXY_8081_LISTEN`
+
+Each of these variables support the special placeholder `{{PROXY}}`, which is
+a literal text placeholder to be replaced with the proxy definition specified
+by the `to:` parameter, if present.  For example, for the following setting:
+
+```
+PROXY_LOCAL_LISTEN_TO='ncat --proxy {{PROXY}}'
+```
+
+invoking the following command:
+
+```
+proxy listen:local:http to:8081
+```
+
+would cause the following command to be executed:
+
+```
+ncat --proxy http://localhost:8081/
+```
+
+assuming that `PROXY_8081_HTTP_URL` or `PROXY_8081_URL` were defined as
+`http://localhost:8081/`.
 
 ### Verifying Proxy Settings
 <a name='Verifying Proxy Settings'></a>
